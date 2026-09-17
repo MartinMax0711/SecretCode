@@ -3,7 +3,8 @@ import { addDays, fmtMonthDay, fromKey } from '../dates.js';
 import { esc } from '../ui.js';
 import { zonedParts } from '../ics.js';
 import {
-  cleanTitle, colorFor, dayKeyIn, eventsOnDay, fmtDuration, fmtTime, loadSchedule, nowStatus, sameZone, viewerTimeZone,
+  assignmentsOnDay, cleanTitle, colorFor, dayKeyIn, eventsOnDay, fmtDuration, fmtTime, loadSchedule,
+  notesOnDay, nowStatus, sameZone, viewerTimeZone,
 } from '../schedule-core.js';
 
 let root;
@@ -129,16 +130,17 @@ function dayCard() {
   const today = dayKeyIn(new Date(), schedule.timeZone);
   const strip = Array.from({ length: 7 }, (_, i) => {
     const key = addDays(weekStart, i);
-    const count = eventsOnDay(schedule, key).filter((e) => !e.allDay).length;
+    const count = eventsOnDay(schedule, key).length;
     return `<button class="day-pill ${key === selected ? 'on' : ''} ${key === today ? 'today' : ''}" data-act="pick" data-date="${key}">
       <span>周${'一二三四五六日'[i]}</span><b>${fromKey(key).getDate()}</b><i>${count ? '•'.repeat(Math.min(count, 4)) : ''}</i>
     </button>`;
   }).join('');
 
   const events = eventsOnDay(schedule, selected);
-  const banners = events.filter((e) => e.allDay).map((e) => `<span class="chip chip-lilac-light">${esc(e.title)}</span>`).join('');
+  const banners = notesOnDay(schedule, selected).map((e) => `<span class="chip chip-lilac-light">${esc(e.title)}</span>`).join('');
+  const homework = assignmentsOnDay(schedule, selected);
   const now = new Date();
-  const list = events.filter((e) => !e.allDay).map((e) => `
+  const list = events.map((e) => `
     <div class="class-item c-${colorFor(e.title)} ${e.start <= now && e.end > now ? 'live' : ''} ${e.end <= now ? 'past' : ''}">
       <div class="class-time">${dualTime(e.start)}<span> – ${fmtTime(e.end, sameZone(schedule.timeZone) ? schedule.timeZone : viewerTimeZone())}</span></div>
       <div class="class-name">${esc(cleanTitle(e.title))}</div>
@@ -155,13 +157,21 @@ function dayCard() {
       <div class="day-strip">${strip}</div>
       ${banners ? `<div class="chips">${banners}</div>` : ''}
       <div class="class-list">${list || '<p class="empty">这天没有课 🌷</p>'}</div>
+      ${homework.length ? `
+        <div class="homework">
+          <div class="setting-label">📝 这天要交的作业（${homework.length}）</div>
+          ${homework.map((h) => `
+            <div class="hw c-${colorFor(h.course)}">
+              <b>${esc(h.task)}</b><span>${esc(cleanTitle(h.course))}</span>
+            </div>`).join('')}
+        </div>` : ''}
     </section>`;
 }
 
 function weekCard() {
   const tz = schedule.timeZone;
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
-  const perDay = days.map((k) => eventsOnDay(schedule, k).filter((e) => !e.allDay));
+  const perDay = days.map((k) => eventsOnDay(schedule, k));
   const shown = days.map((k, i) => ({ k, i, events: perDay[i] })).filter((d) => d.i < 5 || d.events.length);
   const all = perDay.flat();
   if (!all.length) return '';

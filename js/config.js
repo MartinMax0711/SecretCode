@@ -10,5 +10,5 @@ export const CONFIG = {
   // 课表
   scheduleFile: 'data/schedule.ics',
   // 学校所在时区；如果课表文件里带了时区，会优先用文件里的
-  schoolTimeZone: 'America/Chicago',
+  schoolTimeZone: 'America/Los_Angeles',
 };

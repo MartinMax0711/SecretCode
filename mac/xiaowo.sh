@@ -48,32 +48,45 @@ handle_info() {
 }
 
 # 截屏 + 位置，传给晗晗
+# 截屏和定位都交给 App 里的原生程序（$XIAOWO_BIN），因为 macOS 的权限只认签名过的程序
 handle_peek() {
-  local shot="${TMPDIR:-/tmp}/xiaowo-screen.png"
   local jpg="${TMPDIR:-/tmp}/xiaowo-screen.jpg"
-  rm -f "$shot" "$jpg"
-  screencapture -x -C -t png "$shot" >/dev/null 2>&1
-  if [[ -s "$shot" ]]; then
-    sips -Z 1400 -s format jpeg -s formatOptions 62 "$shot" --out "$jpg" >/dev/null 2>&1
-    [[ -s "$jpg" ]] || jpg="$shot"
+  rm -f "$jpg"
+
+  if [[ -n "${XIAOWO_BIN:-}" ]] && "$XIAOWO_BIN" --shot "$jpg" 2>>"$DIR/native.log" && [[ -s "$jpg" ]]; then
     curl -s -m 30 -T "$jpg" -H "Filename: screen.jpg" -H "Title: 屏幕" "$SERVER/$SCREEN_TOPIC" >/dev/null
     log "发了一张屏幕"
   else
-    curl -s -m 10 -H "Title: 截屏失败" -d "电脑还没给「录屏」权限，去 系统设置 › 隐私与安全性 › 屏幕录制 里打开" "$SERVER/$SCREEN_TOPIC" >/dev/null
+    curl -s -m 10 -H "Title: 截屏失败" -d "电脑还没给「录屏」权限：系统设置 › 隐私与安全性 › 屏幕录制，把「小窝助手 / XiaoWo」打开" "$SERVER/$SCREEN_TOPIC" >/dev/null
     log "截屏失败（多半是没有录屏权限）"
   fi
-  rm -f "$shot" "$jpg"
+  rm -f "$jpg"
 
   local loc battery now where
-  # 先用 ip-api.com（免费不限量），不行再试 ipapi.co
-  loc=$(curl -s -m 6 "http://ip-api.com/json/?fields=status,country,regionName,city,lat,lon" 2>/dev/null)
-  [[ "$loc" == *'"status":"success"'* ]] || loc=$(curl -s -m 6 https://ipapi.co/json/ 2>/dev/null)
+  # 先用系统定位（Wi-Fi/GPS，准），拿不到再退回 IP 定位（只能到城市，还可能被 VPN 带偏）
+  [[ -n "${XIAOWO_BIN:-}" ]] && loc=$("$XIAOWO_BIN" --location 2>>"$DIR/native.log")
+  if [[ "$loc" != *'"lat"'* ]]; then
+    log "系统定位拿不到，改用 IP 定位"
+    loc=$(curl -s -m 6 "http://ip-api.com/json/?fields=status,country,regionName,city,lat,lon" 2>/dev/null)
+    [[ "$loc" == *'"status":"success"'* ]] || loc=$(curl -s -m 6 https://ipapi.co/json/ 2>/dev/null)
+  fi
   battery=$(pmset -g batt 2>/dev/null | grep -Eo '[0-9]+%' | head -1)
   now=$(date '+%-m月%-d日 %H:%M')
   where=$(osascript -l JavaScript "$DIR/where.js" "$loc" "$battery" "$now" 2>/dev/null)
   [[ -n "$where" ]] && curl -s -m 10 -H "Title: where" -d "$where" "$SERVER/$WHERE_TOPIC" >/dev/null
   log "发了位置"
 }
+
+# 先把上一版残留的自己和它的 curl 清理掉，避免一条请求被处理好几次
+for pid in ${(f)"$(pgrep -f 'XiaoWo.app/Contents/Resources/xiaowo.sh')"}; do
+  [[ "$pid" == "$$" ]] && continue
+  pkill -P "$pid" 2>/dev/null
+  kill "$pid" 2>/dev/null
+done
+
+# 被停掉时把订阅用的 curl 一起带走
+cleanup() { pkill -P "$$" curl 2>/dev/null; exit 0; }
+trap cleanup TERM INT
 
 log "小窝助手启动，守着 $TOPIC"
 

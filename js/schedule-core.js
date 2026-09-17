@@ -10,12 +10,29 @@ export function loadSchedule() {
     .then((text) => {
       if (!text || !text.includes('BEGIN:VCALENDAR')) return { timeZone: CONFIG.schoolTimeZone, events: [], missing: true };
       const parsed = parseICS(text, CONFIG.schoolTimeZone);
-      const schedule = { ...parsed, classes: parsed.events.filter((e) => !e.allDay), allDay: parsed.events.filter((e) => e.allDay) };
+      const schedule = { ...parsed, ...classify(parsed.events) };
       buildColors(schedule);
       return schedule;
     })
     .catch(() => ({ timeZone: CONFIG.schoolTimeZone, events: [], missing: true }));
   return cache;
+}
+
+// 课表里混了三种东西：上课、Canvas 上的作业（全天）、学校活动/放假（全天）
+function classify(events) {
+  const classes = [];
+  const assignments = [];
+  const notes = [];
+  for (const e of events) {
+    if (!e.allDay) {
+      classes.push(e);
+      continue;
+    }
+    const m = /^(.+?)\s*-\s*\d+\s*[:：]\s*(.+)$/.exec(e.title);
+    if (m) assignments.push({ ...e, course: m[1].trim(), task: m[2].trim() });
+    else notes.push({ ...e, title: e.title.replace(/\s*\((Prep|Upper School|US)\)\s*$/i, '').trim() });
+  }
+  return { classes, assignments, notes };
 }
 
 export function viewerTimeZone() {
@@ -68,7 +85,21 @@ export function colorFor(title) {
 }
 
 export function eventsOnDay(schedule, dayKey) {
-  return schedule.events.filter((e) => (e.allDay ? localKey(e.start) : dayKeyIn(e.start, schedule.timeZone)) === dayKey);
+  return (schedule.classes || []).filter((e) => dayKeyIn(e.start, schedule.timeZone) === dayKey);
+}
+
+function coversDay(e, dayKey) {
+  const start = localKey(e.start);
+  const end = e.end ? localKey(e.end) : start;
+  return dayKey >= start && (dayKey < end || dayKey === start);
+}
+
+export function assignmentsOnDay(schedule, dayKey) {
+  return (schedule.assignments || []).filter((e) => coversDay(e, dayKey));
+}
+
+export function notesOnDay(schedule, dayKey) {
+  return (schedule.notes || []).filter((e) => coversDay(e, dayKey));
 }
 
 function localKey(d) {

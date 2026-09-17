@@ -47,7 +47,19 @@ function parseLine(line) {
 }
 
 function unescapeText(s) {
-  return (s || '').replace(/\\n/gi, '\n').replace(/\\([,;\\])/g, '$1').trim();
+  return decodeEntities((s || '').replace(/\\n/gi, '\n').replace(/\\([,;\\])/g, '$1')).trim();
+}
+
+// 课表里混着 &#160; &amp; 这种 HTML 实体
+const ENTITIES = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' };
+function decodeEntities(s) {
+  return s.replace(/&(#x?[0-9a-f]+|[a-z]+);/gi, (m, code) => {
+    if (code[0] === '#') {
+      const n = code[1].toLowerCase() === 'x' ? parseInt(code.slice(2), 16) : parseInt(code.slice(1), 10);
+      return Number.isFinite(n) ? String.fromCodePoint(n) : m;
+    }
+    return ENTITIES[code.toLowerCase()] ?? m;
+  });
 }
 
 function first(props, key) {
