@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>晗晗的小窝</title>
+  <meta name="description" content="只属于晗晗的小网站">
+  <meta name="theme-color" content="#ffe8ef">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="晗晗的小窝">
+  <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+  <link rel="manifest" href="manifest.webmanifest">
+  <!-- 字体异步加载，加载不到也不影响页面 -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/zcool-kuaile@5/index.css" media="print" onload="this.media='all'">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/ma-shan-zheng@5/index.css" media="print" onload="this.media='all'">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/play.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#home"><span class="brand-bow">🎀</span><span>晗晗的小窝</span></a>
+    <nav class="topnav" aria-label="主导航"></nav>
+    <button class="icon-btn" id="settings-btn" aria-label="设置">⚙️</button>
+  </header>
+
+  <main id="view" tabindex="-1"></main>
+
+  <nav class="tabbar" aria-label="底部导航"></nav>
+
+  <div id="toast-root" aria-live="polite"></div>
+  <div id="sheet-root"></div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

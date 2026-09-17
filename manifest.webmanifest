@@ -1,0 +1,14 @@
+{
+  "name": "晗晗的小窝",
+  "short_name": "晗晗的小窝",
+  "start_url": "./#home",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#fff4f7",
+  "theme_color": "#ffe8ef",
+  "icons": [
+    { "src": "assets/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "assets/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "assets/icon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}
