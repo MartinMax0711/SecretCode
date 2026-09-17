@@ -66,7 +66,12 @@ function statusCard(stats) {
     actions = `<button class="btn btn-primary" data-act="start" data-date="${today}">🩸 今天来了</button>`;
   } else {
     big = s.daysLeft === 0 ? '预计<b>今天</b>来' : s.daysLeft === 1 ? '预计<b>明天</b>来' : `距离下次还有 <b>${s.daysLeft}</b> 天`;
-    sub = `预计 ${fmtMonthDay(s.nextStart)} ${fmtWeekday(s.nextStart)} · 周期第 ${s.cycleDay} 天 · ${s.phase}`;
+    if (stats.irregular && stats.windowStart && stats.windowEnd) {
+      // 经期不规律：给一个区间而不是一个确定的日子
+      sub = `${esc(CONFIG.herName)}周期不太规律，大概 ${fmtMonthDay(stats.windowStart)} ~ ${fmtMonthDay(stats.windowEnd)} 之间来<br>（最近周期 ${stats.cycleMin}~${stats.cycleMax} 天）· ${s.phase}`;
+    } else {
+      sub = `预计 ${fmtMonthDay(s.nextStart)} ${fmtWeekday(s.nextStart)} · 周期第 ${s.cycleDay} 天 · ${s.phase}`;
+    }
     if (s.phase === '经前期') sub += `<br>经前容易烦躁，${esc(CONFIG.hisName)}要特别乖 🐶`;
     actions = `<button class="btn btn-primary" data-act="start" data-date="${today}">🩸 今天来了</button>
       <button class="btn btn-ghost" data-act="day" data-date="${today}">📝 记一下今天</button>`;
@@ -121,9 +126,13 @@ function calendar(stats) {
 }
 
 function statsCard(stats) {
+  const cycleLabel = data.settings.fixedCycle ? '固定周期' : stats.hasCycleData ? '平均周期' : '平均周期（默认）';
+  const cycleNum = stats.irregular
+    ? `${stats.cycleMin}~${stats.cycleMax}`
+    : `${stats.avgCycle}`;
   return `
     <section class="card stats-row">
-      <div class="stat"><div class="stat-num">${stats.avgCycle}<small>天</small></div><div class="stat-label">平均周期${stats.hasCycleData ? '' : '（默认）'}</div></div>
+      <div class="stat"><div class="stat-num">${cycleNum}<small>天</small></div><div class="stat-label">${cycleLabel}</div></div>
       <div class="stat"><div class="stat-num">${stats.avgLen}<small>天</small></div><div class="stat-label">平均经期</div></div>
       <div class="stat"><div class="stat-num">${data.periods.length}<small>次</small></div><div class="stat-label">已记录</div></div>
       <button class="icon-btn stat-gear" data-act="settings" aria-label="经期设置">⚙️</button>
@@ -324,18 +333,31 @@ function openEditor(period) {
 
 function openSettings() {
   const s = data.settings;
+  const stats = computeStats(data);
+  const range = stats.hasCycleData
+    ? `你最近 ${stats.cycleCount} 次周期是 <b>${stats.cycleMin}~${stats.cycleMax}</b> 天${stats.irregular ? '，波动比较大，属于不太规律' : '，比较稳定'}`
+    : '还没有足够记录来算周期';
   const { el, close } = openSheet(`
     <h3 class="sheet-title">经期设置</h3>
-    <p class="hint">记录少于两次时，用下面的默认值来预测；记录多了会自动按实际情况算。</p>
-    <label class="field"><span>默认周期（天）</span><input type="number" class="input" id="st-cycle" min="18" max="60" value="${s.cycleLength}"></label>
-    <label class="field"><span>默认经期长度（天）</span><input type="number" class="input" id="st-len" min="2" max="10" value="${s.periodLength}"></label>
+    <div class="setting-block">
+      <div class="setting-label">周期预测</div>
+      <p class="hint">${range}。</p>
+      <label class="setting-row"><span>手动固定周期</span><input type="checkbox" class="switch" id="st-fixed" ${s.fixedCycle ? 'checked' : ''}></label>
+      <p class="hint">默认关：按你最近几次的实际情况自动算，不规律时会给一个日期区间。<br>打开：始终用你下面填的天数来预测（适合你自己心里有数、想固定一个数的时候）。</p>
+      <label class="field"><span>周期天数<small id="st-cycle-hint"> —— ${s.fixedCycle ? '用这个值预测' : '仅在记录不足时用作默认'}</small></span><input type="number" class="input" id="st-cycle" min="18" max="90" value="${s.cycleLength}"></label>
+    </div>
+    <label class="field"><span>经期长度（天）</span><input type="number" class="input" id="st-len" min="2" max="10" value="${s.periodLength}"></label>
     <label class="setting-row"><span>来了 / 很痛的时候告诉${esc(CONFIG.hisName)}</span><input type="checkbox" class="switch" id="st-notify" ${s.notifyHim ? 'checked' : ''}></label>
     <button class="btn btn-primary btn-block" id="st-save">保存</button>`);
+  el.querySelector('#st-fixed').addEventListener('change', (e) => {
+    el.querySelector('#st-cycle-hint').textContent = ` —— ${e.target.checked ? '用这个值预测' : '仅在记录不足时用作默认'}`;
+  });
   el.querySelector('#st-save').addEventListener('click', () => {
     const cycle = Number(el.querySelector('#st-cycle').value);
     const len = Number(el.querySelector('#st-len').value);
-    if (cycle >= 18 && cycle <= 60) s.cycleLength = cycle;
+    if (cycle >= 18 && cycle <= 90) s.cycleLength = cycle;
     if (len >= 2 && len <= 10) s.periodLength = len;
+    s.fixedCycle = el.querySelector('#st-fixed').checked;
     s.notifyHim = el.querySelector('#st-notify').checked;
     close();
     persist();

@@ -7,12 +7,14 @@ const base = CONFIG.ntfyServer.replace(/\/$/, '');
 const T_ASK = `${CONFIG.ntfyTopic}-ask`;
 const T_SCREEN = `${CONFIG.ntfyTopic}-screen`;
 const T_WHERE = `${CONFIG.ntfyTopic}-where`;
+const T_CAM = `${CONFIG.ntfyTopic}-cam`;
 
 let root;
 let alive = false;
 let timer = null;
 let living = false;
 let lastScreen = null;
+let lastCam = null;
 let lastWhere = null;
 let waiting = false;
 
@@ -41,11 +43,12 @@ function draw() {
         <label class="live-toggle"><input type="checkbox" id="live-on" ${living ? 'checked' : ''}><span>实时看</span></label>
       </div>
       <div class="screen-frame" id="screen-frame">${screenHtml()}</div>
+      <div class="cam-frame" id="cam-frame">${camHtml()}</div>
       <div class="btn-row">
         <button class="btn btn-primary" data-act="ask">🔄 看一眼现在</button>
         <button class="btn btn-ghost" data-act="secret">🔐 暗号</button>
       </div>
-      <p class="hint">要${name}的电脑开着、并且装好了小窝助手才看得到哦。</p>
+      <p class="hint">要${name}的电脑开着、并且装好了小窝助手才看得到哦。点一下会同时拿到屏幕、样子和位置。</p>
     </section>
 
     <section class="card" id="where-card">${whereHtml()}</section>`;
@@ -53,11 +56,20 @@ function draw() {
 
 function screenHtml() {
   if (!lastScreen) {
-    return `<div class="screen-empty">${waiting ? '<span class="spinner"></span>正在叫醒他的电脑…' : '还没有画面～ 点下面看一眼'}</div>`;
+    return `<div class="screen-empty">${waiting ? `<span class="spinner"></span>正在叫醒${esc(CONFIG.hisName)}的电脑…` : '还没有画面～ 点下面看一眼'}</div>`;
   }
   return `
     <img class="screen-img" src="${esc(lastScreen.url)}" alt="${esc(CONFIG.hisName)}的屏幕">
-    <div class="screen-meta">${waiting ? '<span class="spinner"></span>' : ''}更新于 ${relativeTime(lastScreen.time)}</div>`;
+    <div class="screen-meta">${waiting ? '<span class="spinner"></span>' : '🖥️ 屏幕 · '}更新于 ${relativeTime(lastScreen.time)}</div>`;
+}
+
+function camHtml() {
+  if (!lastCam) {
+    return `<div class="cam-empty">${waiting ? '<span class="spinner"></span>正在拍…' : `📷 还没拍到${esc(CONFIG.hisName)}`}</div>`;
+  }
+  return `
+    <img class="cam-img" src="${esc(lastCam.url)}" alt="${esc(CONFIG.hisName)}现在的样子">
+    <div class="screen-meta">📷 ${esc(CONFIG.hisName)}本人 · ${relativeTime(lastCam.time)}</div>`;
 }
 
 function whereHtml() {
@@ -82,6 +94,8 @@ function whereHtml() {
 function paint() {
   const frame = root.querySelector('#screen-frame');
   if (frame) frame.innerHTML = screenHtml();
+  const cam = root.querySelector('#cam-frame');
+  if (cam) cam.innerHTML = camHtml();
   const where = root.querySelector('#where-card');
   if (where) where.innerHTML = whereHtml();
 }
@@ -101,11 +115,14 @@ async function latest(topic, since = '15m') {
 
 async function refresh() {
   try {
-    const [screen, where] = await Promise.all([latest(T_SCREEN), latest(T_WHERE, '30m')]);
+    const [screen, cam, where] = await Promise.all([latest(T_SCREEN), latest(T_CAM), latest(T_WHERE, '30m')]);
     if (!alive) return;
     if (screen?.attachment?.url && screen.id !== lastScreen?.id) {
       lastScreen = { id: screen.id, url: screen.attachment.url, time: (screen.time || 0) * 1000 };
       waiting = false;
+    }
+    if (cam?.attachment?.url && cam.id !== lastCam?.id) {
+      lastCam = { id: cam.id, url: cam.attachment.url, time: (cam.time || 0) * 1000 };
     }
     if (where) {
       try {
@@ -136,13 +153,17 @@ async function ask() {
     toast('叫不动他的电脑…检查一下网络', { icon: '⚠️' });
     return;
   }
-  // 电脑那边截图、上传要一会儿
-  for (const delay of [1200, 1500, 2000, 3000, 4000]) {
+  // 电脑那边截图、拍照、上传要一会儿（摄像头要预热，稍慢）
+  const beforeScreen = lastScreen?.id;
+  const beforeCam = lastCam?.id;
+  let gotScreen = false;
+  for (const delay of [1200, 1500, 2000, 2500, 3000, 4000]) {
     await new Promise((r) => setTimeout(r, delay));
     if (!alive) return;
-    const before = lastScreen?.id;
     await refresh();
-    if (lastScreen?.id !== before) break;
+    if (lastScreen?.id !== beforeScreen) gotScreen = true;
+    // 屏幕和摄像头都到齐了就停
+    if (gotScreen && lastCam?.id !== beforeCam) break;
   }
   if (alive && waiting) {
     waiting = false;

@@ -414,3 +414,16 @@
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
+
+.cam-frame {
+  position: relative;
+  border-radius: 16px;
+  overflow: hidden;
+  background: #2b1b24;
+  margin-top: 10px;
+  min-height: 120px;
+  display: grid;
+  place-items: center;
+}
+.cam-img { width: 100%; display: block; }
+.cam-empty { color: rgba(255,255,255,.62); font-size: 13.5px; padding: 30px 16px; text-align: center; display: flex; align-items: center; gap: 8px; }

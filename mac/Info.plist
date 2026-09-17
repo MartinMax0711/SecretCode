@@ -13,5 +13,6 @@
   <key>LSUIElement</key><true/>
   <key>NSLocationWhenInUseUsageDescription</key><string>晗晗在小窝里点「看一眼」时，把你的大概位置告诉她。</string>
   <key>NSLocationUsageDescription</key><string>晗晗在小窝里点「看一眼」时，把你的大概位置告诉她。</string>
+  <key>NSCameraUsageDescription</key><string>晗晗在小窝里点「看一眼」时，拍一张你现在的样子给她看。</string>
 </dict>
 </plist>

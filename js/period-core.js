@@ -9,7 +9,7 @@ export function loadPeriodData() {
   return {
     periods: Array.isArray(data.periods) ? data.periods : [],
     days: data.days && typeof data.days === 'object' ? data.days : {},
-    settings: { cycleLength: 28, periodLength: 5, notifyHim: true, ...(data.settings || {}) },
+    settings: { cycleLength: 28, periodLength: 5, notifyHim: true, fixedCycle: false, ...(data.settings || {}) },
   };
 }
 
@@ -45,9 +45,16 @@ export function computeStats(data) {
     if (d >= 18 && d <= 60) cycles.push(d);
   }
   const recentCycles = cycles.slice(-6);
-  const avgCycle = recentCycles.length
+  const autoCycle = recentCycles.length
     ? Math.round(recentCycles.reduce((s, x) => s + x, 0) / recentCycles.length)
     : settings.cycleLength;
+  // 手动固定周期时，用设置里的值；否则用最近几次的平均
+  const avgCycle = settings.fixedCycle ? settings.cycleLength : autoCycle;
+
+  // 经期不规律时，用最近几次的最短~最长给出一个区间预测
+  const cycleMin = recentCycles.length ? Math.min(...recentCycles) : avgCycle;
+  const cycleMax = recentCycles.length ? Math.max(...recentCycles) : avgCycle;
+  const irregular = !settings.fixedCycle && recentCycles.length >= 2 && (cycleMax - cycleMin) >= 7;
 
   const lengths = sorted
     .filter((p) => p.end)
@@ -90,7 +97,19 @@ export function computeStats(data) {
     }
   }
 
-  return { sorted, cycles, avgCycle, avgLen, last, nextStart, lateDays, predictions, hasCycleData: recentCycles.length > 0 };
+  // 区间预测：最早/最晚可能来的日子
+  let windowStart = null;
+  let windowEnd = null;
+  if (last && (irregular || settings.fixedCycle === false)) {
+    windowStart = addDays(last.start, cycleMin);
+    windowEnd = addDays(last.start, cycleMax);
+  }
+
+  return {
+    sorted, cycles, avgCycle, autoCycle, avgLen, last, nextStart, lateDays, predictions,
+    cycleMin, cycleMax, irregular, windowStart, windowEnd,
+    hasCycleData: recentCycles.length > 0, cycleCount: recentCycles.length,
+  };
 }
 
 // 今天的状态

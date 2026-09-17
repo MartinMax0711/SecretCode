@@ -11,20 +11,15 @@ import CoreLocation
 import ScreenCaptureKit
 import AppKit
 import CoreGraphics
-
-// MARK: - 权限
-
-// 录屏权限：没有的话主动弹窗要（给完要重启程序才生效）
-@discardableResult
-func ensureScreenAccess() -> Bool {
-    if CGPreflightScreenCaptureAccess() { return true }
-    return CGRequestScreenCaptureAccess()
-}
+import AVFoundation
+import CoreImage
 
 // MARK: - 截屏
 
+// 日常截屏只做「预检」，不弹窗——没权限就安静返回，交给上层提示晗晗。
+// 主动弹窗申请只在 --check / --register 时做一次。
 func captureScreen(to path: String, maxWidth: Int) async -> Bool {
-    guard ensureScreenAccess() else {
+    guard CGPreflightScreenCaptureAccess() else {
         FileHandle.standardError.write("没有录屏权限\n".data(using: .utf8)!)
         return false
     }
@@ -53,6 +48,69 @@ func captureScreen(to path: String, maxWidth: Int) async -> Bool {
     }
 }
 
+// MARK: - 摄像头拍照
+
+final class FrameGrabber: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
+    private let session = AVCaptureSession()
+    private var captured: CGImage?
+    private var frameCount = 0
+    private let done = DispatchSemaphore(value: 0)
+    private let ciContext = CIContext()
+
+    func grab(to path: String, maxWidth: Int, timeout: TimeInterval) -> Bool {
+        guard AVCaptureDevice.authorizationStatus(for: .video) == .authorized else {
+            FileHandle.standardError.write("没有摄像头权限\n".data(using: .utf8)!)
+            return false
+        }
+        guard let device = AVCaptureDevice.default(for: .video),
+              let input = try? AVCaptureDeviceInput(device: device),
+              session.canAddInput(input) else {
+            FileHandle.standardError.write("打不开摄像头\n".data(using: .utf8)!)
+            return false
+        }
+        session.sessionPreset = .high
+        session.addInput(input)
+        let output = AVCaptureVideoDataOutput()
+        output.videoSettings = [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA]
+        output.alwaysDiscardsLateVideoFrames = true
+        output.setSampleBufferDelegate(self, queue: DispatchQueue(label: "cam"))
+        guard session.canAddOutput(output) else { return false }
+        session.addOutput(output)
+        session.startRunning()
+        _ = done.wait(timeout: .now() + timeout)
+        session.stopRunning()
+
+        guard let cg = captured else {
+            FileHandle.standardError.write("没抓到画面\n".data(using: .utf8)!)
+            return false
+        }
+        var image = cg
+        let scale = min(1.0, Double(maxWidth) / Double(cg.width))
+        if scale < 1.0 {
+            let w = Int(Double(cg.width) * scale), h = Int(Double(cg.height) * scale)
+            if let ctx = CGContext(data: nil, width: w, height: h, bitsPerComponent: 8, bytesPerRow: 0,
+                                   space: CGColorSpaceCreateDeviceRGB(),
+                                   bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) {
+                ctx.interpolationQuality = .high
+                ctx.draw(cg, in: CGRect(x: 0, y: 0, width: w, height: h))
+                if let scaled = ctx.makeImage() { image = scaled }
+            }
+        }
+        let rep = NSBitmapImageRep(cgImage: image)
+        guard let data = rep.representation(using: .jpeg, properties: [.compressionFactor: 0.7]) else { return false }
+        do { try data.write(to: URL(fileURLWithPath: path)); return true } catch { return false }
+    }
+
+    func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
+        frameCount += 1
+        // 前几帧摄像头还在自动曝光，跳过，拿一张亮度正常的
+        guard captured == nil, frameCount >= 8, let pb = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
+        let ci = CIImage(cvPixelBuffer: pb)
+        captured = ciContext.createCGImage(ci, from: ci.extent)
+        done.signal()
+    }
+}
+
 // MARK: - 定位
 
 final class Locator: NSObject, CLLocationManagerDelegate {
@@ -63,8 +121,9 @@ final class Locator: NSObject, CLLocationManagerDelegate {
     func locate(timeout: TimeInterval) -> CLLocation? {
         manager.delegate = self
         manager.desiredAccuracy = kCLLocationAccuracyHundredMeters
+        // 后台助手用「始终允许」，这样授权一次以后就不再问
         if manager.authorizationStatus == .notDetermined {
-            manager.requestWhenInUseAuthorization()
+            manager.requestAlwaysAuthorization()
         }
         manager.startUpdatingLocation()
 
@@ -130,6 +189,27 @@ func describe(_ location: CLLocation, timeout: TimeInterval) -> [String: Any] {
 
 let args = CommandLine.arguments
 
+// --request：agent 启动时调一次，把录屏、定位、摄像头权限一次性申请好（之后就静默，不再反复问）
+if args.contains("--request") {
+    if !CGPreflightScreenCaptureAccess() {
+        CGRequestScreenCaptureAccess()   // 弹一次录屏授权
+    }
+    if AVCaptureDevice.authorizationStatus(for: .video) == .notDetermined {
+        let sem = DispatchSemaphore(value: 0)
+        AVCaptureDevice.requestAccess(for: .video) { _ in sem.signal() }  // 弹一次摄像头授权
+        _ = sem.wait(timeout: .now() + 20)
+    }
+    if CLLocationManager().authorizationStatus == .notDetermined {
+        _ = Locator().locate(timeout: 20) // 弹一次定位授权
+    }
+    exit(0)
+}
+
+// --photo 路径：从摄像头拍一张
+if let i = args.firstIndex(of: "--photo"), i + 1 < args.count {
+    exit(FrameGrabber().grab(to: args[i + 1], maxWidth: 900, timeout: 8) ? 0 : 1)
+}
+
 // --check：把两个权限都要一遍，告诉用户现在什么状态
 if args.contains("--check") {
     let screen = CGPreflightScreenCaptureAccess()
@@ -154,6 +234,16 @@ if args.contains("--check") {
         let locator = Locator()
         _ = locator.locate(timeout: 12)
         print("   → 已经弹窗申请；如果没看到弹窗，去 系统设置 › 隐私与安全性 › 定位服务，把 XiaoWo 打开")
+    }
+
+    let cam = AVCaptureDevice.authorizationStatus(for: .video)
+    let camText = cam == .authorized ? "✅ 已允许" : cam == .denied ? "❌ 拒绝了" : cam == .restricted ? "被限制" : "还没问过"
+    print("摄像头权限：" + camText)
+    if cam == .notDetermined {
+        let sem = DispatchSemaphore(value: 0)
+        AVCaptureDevice.requestAccess(for: .video) { _ in sem.signal() }
+        _ = sem.wait(timeout: .now() + 12)
+        print("   → 已经弹窗申请；如果没看到弹窗，去 系统设置 › 隐私与安全性 › 摄像头，把 XiaoWo 打开")
     }
     exit(0)
 }
