@@ -7,9 +7,12 @@ import { fetchRecentReplies, notifyHim, subscribeReplies } from '../notify.js';
 import { loadSchedule, nowStatus, cleanTitle, fmtDuration } from '../schedule-core.js';
 import { nowCardHtml } from './schedule.js';
 import { computeStats, currentStatus, loadPeriodData } from '../period-core.js';
-import { fmtMonthDay, relativeTime, todayKey } from '../dates.js';
+import { fmtMonthDay, relativeTime, todayKey, fromKey, toKey } from '../dates.js';
 import { loadAllPhotos } from './gallery.js';
 import { sleepSummary } from './sleep.js';
+
+const base = CONFIG.ntfyServer.replace(/\/$/, '');
+const T_MISS = `${CONFIG.ntfyTopic}-miss`;
 
 const PRESETS = [
   { text: '想你了 🥺', priority: 4 },
@@ -47,6 +50,8 @@ export function render(container) {
     sfx.ding();
     toast(`${CONFIG.hisName}回复：${msg.message}`, { icon: '💌', duration: 4000 });
   });
+
+  loadMiss();
 
   loadAllPhotos().then((photos) => {
     if (!alive || !photos.length) return;
@@ -104,6 +109,8 @@ function draw() {
       <div class="hero-sub">这里是只属于你的小窝</div>
     </section>
 
+    <div id="miss-slot"></div>
+
     <div id="now-slot"><section class="card now-card"><div class="now-icon">🐶</div><div class="now-text"><div class="now-label">${esc(CONFIG.hisName)}现在</div><div class="now-main">看看去…</div></div></section></div>
 
     <section class="card bell-card">
@@ -150,6 +157,59 @@ function draw() {
     </div>`;
 
   renderReplies();
+}
+
+// 老公（耀耀）主动发的「我想你」时间线
+async function loadMiss() {
+  const slot = root?.querySelector('#miss-slot');
+  if (!slot) return;
+  let msgs = [];
+  try {
+    const res = await fetch(`${base}/${T_MISS}/json?poll=1&since=168h`);
+    if (res.ok) {
+      msgs = (await res.text()).split('\n').filter(Boolean)
+        .map((l) => { try { return JSON.parse(l); } catch { return null; } })
+        .filter((m) => m && m.event === 'message')
+        .map((m) => ({ time: (m.time || 0) * 1000, text: (m.message || '').trim() }))
+        .sort((a, b) => b.time - a.time);
+    }
+  } catch { /* 网络不好就不显示 */ }
+  if (!alive) return;
+
+  if (!msgs.length) {
+    slot.innerHTML = '';
+    return;
+  }
+
+  const today = todayKey();
+  const todayCount = msgs.filter((m) => toKey(new Date(m.time)) === today).length;
+  const newest = msgs[0];
+  const isNew = Date.now() - newest.time < 6 * 60 * 60 * 1000; // 6 小时内算「刚刚」
+
+  const items = msgs.slice(0, 6).map((m, i) => {
+    const d = new Date(m.time);
+    const dayLabel = toKey(d) === today ? '今天'
+      : toKey(d) === toKey(new Date(Date.now() - 86400000)) ? '昨天'
+      : fmtMonthDay(toKey(d));
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mm = String(d.getMinutes()).padStart(2, '0');
+    return `<div class="miss-item ${i === 0 && isNew ? 'fresh' : ''}">
+      <span class="miss-time">${dayLabel} ${hh}:${mm}</span>
+      <span class="miss-text">${esc(m.text || '我好想你')}</span>
+    </div>`;
+  }).join('');
+
+  slot.innerHTML = `
+    <section class="card miss-card ${isNew ? 'glow' : ''}">
+      <div class="miss-head">
+        <span class="miss-heart">💗</span>
+        <div>
+          <div class="miss-title">${esc(CONFIG.hisName)}想你了</div>
+          <div class="miss-sub">${todayCount > 0 ? `今天已经想你 <b>${todayCount}</b> 次` : `最近想你 ${msgs.length} 次`}</div>
+        </div>
+      </div>
+      <div class="miss-list">${items}</div>
+    </section>`;
 }
 
 function paintNow() {

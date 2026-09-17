@@ -742,3 +742,27 @@ textarea.input { resize: vertical; line-height: 1.6; }
 }
 .hw b { display: block; font-size: 14px; font-weight: 600; color: var(--text); }
 .hw span { font-size: 11.5px; color: var(--text-3); }
+
+/* ---------- 老公想我 ---------- */
+.miss-card {
+  background: linear-gradient(160deg, #fff 0%, #ffeef4 100%);
+  border: 1px solid var(--pink-100);
+}
+.miss-card.glow { box-shadow: 0 8px 26px rgba(244, 86, 143, .28); animation: miss-glow 2.4s ease-in-out infinite; }
+@keyframes miss-glow { 0%, 100% { box-shadow: 0 8px 26px rgba(244,86,143,.20); } 50% { box-shadow: 0 8px 30px rgba(244,86,143,.38); } }
+.miss-head { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.miss-heart { font-size: 30px; animation: heart-beat 1.4s ease-in-out infinite; }
+@keyframes heart-beat { 0%, 100% { transform: scale(1); } 15% { transform: scale(1.25); } 30% { transform: scale(1); } 45% { transform: scale(1.18); } }
+.miss-title { font-family: var(--font-cute); font-size: 18px; color: var(--pink-600); }
+.miss-sub { font-size: 12.5px; color: var(--text-2); }
+.miss-sub b { color: var(--pink-500); }
+.miss-list { display: flex; flex-direction: column; gap: 7px; }
+.miss-item {
+  display: flex; align-items: baseline; gap: 10px;
+  background: rgba(255,255,255,.7);
+  border-radius: 12px 12px 12px 4px;
+  padding: 9px 13px;
+}
+.miss-item.fresh { background: var(--pink-100); box-shadow: inset 0 0 0 1.5px var(--pink-200); }
+.miss-time { font-size: 11.5px; color: var(--pink-400); flex: none; font-variant-numeric: tabular-nums; }
+.miss-text { flex: 1; font-size: 14.5px; color: var(--rose-700); }
