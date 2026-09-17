@@ -427,3 +427,14 @@
 }
 .cam-img { width: 100%; display: block; }
 .cam-empty { color: rgba(255,255,255,.62); font-size: 13.5px; padding: 30px 16px; text-align: center; display: flex; align-items: center; gap: 8px; }
+
+.phone-card { padding: 14px 16px; }
+.phone-row { display: flex; align-items: center; gap: 12px; }
+.phone-emoji { font-size: 26px; flex: none; width: 46px; height: 46px; display: grid; place-items: center; background: var(--pink-50); border-radius: 14px; }
+.phone-row.on .phone-emoji { background: var(--mint-100); }
+.phone-row.idle .phone-emoji { background: var(--lilac-100); }
+.phone-main { font-size: 15.5px; font-weight: 600; color: var(--rose-700); }
+.phone-sub { font-size: 12.5px; color: var(--text-3); margin-top: 1px; }
+.phone-dot { margin-left: auto; width: 10px; height: 10px; border-radius: 50%; background: var(--text-3); flex: none; }
+.phone-dot.live { background: #35ad84; box-shadow: 0 0 0 0 rgba(53,173,132,.6); animation: phone-pulse 1.8s infinite; }
+@keyframes phone-pulse { 0% { box-shadow: 0 0 0 0 rgba(53,173,132,.5); } 70% { box-shadow: 0 0 0 8px rgba(53,173,132,0); } 100% { box-shadow: 0 0 0 0 rgba(53,173,132,0); } }

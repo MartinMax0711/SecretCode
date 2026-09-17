@@ -8,14 +8,20 @@ const T_ASK = `${CONFIG.ntfyTopic}-ask`;
 const T_SCREEN = `${CONFIG.ntfyTopic}-screen`;
 const T_WHERE = `${CONFIG.ntfyTopic}-where`;
 const T_CAM = `${CONFIG.ntfyTopic}-cam`;
+const T_PHONE = `${CONFIG.ntfyTopic}-phone`;
+
+// iPhone 打开 App 多久内算「在玩手机」
+const PHONE_ACTIVE_MS = 12 * 60 * 1000;
 
 let root;
 let alive = false;
 let timer = null;
+let phoneTimer = null;
 let living = false;
 let lastScreen = null;
 let lastCam = null;
 let lastWhere = null;
+let lastPhone = null;
 let waiting = false;
 
 export function render(container) {
@@ -24,12 +30,16 @@ export function render(container) {
   draw();
   root.addEventListener('click', onClick);
   refresh();
+  refreshPhone();
+  // iPhone 状态每 30 秒刷新一次，页面开着的时候实时更新
+  phoneTimer = setInterval(() => { if (!document.hidden) refreshPhone(); }, 30000);
 }
 
 export function destroy() {
   alive = false;
   living = false;
   clearInterval(timer);
+  clearInterval(phoneTimer);
   root?.removeEventListener('click', onClick);
 }
 
@@ -37,6 +47,7 @@ function draw() {
   const name = esc(CONFIG.hisName);
   root.innerHTML = `
     <h1 class="page-title">📍 陪着你</h1>
+    <section class="card phone-card" id="phone-card">${phoneHtml()}</section>
     <section class="card live-card">
       <div class="card-head">
         <h2>${name}的屏幕</h2>
@@ -61,6 +72,31 @@ function screenHtml() {
   return `
     <img class="screen-img" src="${esc(lastScreen.url)}" alt="${esc(CONFIG.hisName)}的屏幕">
     <div class="screen-meta">${waiting ? '<span class="spinner"></span>' : '🖥️ 屏幕 · '}更新于 ${relativeTime(lastScreen.time)}</div>`;
+}
+
+function phoneHtml() {
+  const name = esc(CONFIG.hisName);
+  if (!lastPhone) {
+    return `
+      <div class="phone-row">
+        <span class="phone-emoji">📱</span>
+        <div>
+          <div class="phone-main">还不知道${name}手机的状态</div>
+          <div class="phone-sub">让${name}设好快捷指令就能看到啦</div>
+        </div>
+      </div>`;
+  }
+  const active = Date.now() - lastPhone.time < PHONE_ACTIVE_MS;
+  const appTxt = lastPhone.text && lastPhone.text !== '在玩手机' ? `（${esc(lastPhone.text)}）` : '';
+  return `
+    <div class="phone-row ${active ? 'on' : 'idle'}">
+      <span class="phone-emoji">${active ? '📱' : '🌙'}</span>
+      <div>
+        <div class="phone-main">${active ? `${name}正在玩手机${appTxt}` : `${name}的手机应该放下了`}</div>
+        <div class="phone-sub">${active ? '刚刚还在用' : `上次用是 ${relativeTime(lastPhone.time)}${appTxt}`}</div>
+      </div>
+      <span class="phone-dot ${active ? 'live' : ''}"></span>
+    </div>`;
 }
 
 function camHtml() {
@@ -130,6 +166,16 @@ async function refresh() {
       } catch { /* 格式不对就忽略 */ }
     }
     paint();
+  } catch { /* 网络不好 */ }
+}
+
+async function refreshPhone() {
+  try {
+    const m = await latest(T_PHONE, '6h');
+    if (!alive) return;
+    if (m) lastPhone = { time: (m.time || 0) * 1000, text: (m.message || '').trim() };
+    const card = root.querySelector('#phone-card');
+    if (card) card.innerHTML = phoneHtml();
   } catch { /* 网络不好 */ }
 }
 
