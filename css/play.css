@@ -532,3 +532,5 @@ body.focus-on { overflow: hidden; }
 .portal-block form { margin-top: 10px; display: flex; flex-direction: column; gap: 8px; }
 .miss-quick { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
 button.quick { font-family: inherit; text-align: left; border: 0; border-top: 3px solid var(--lilac-300); cursor: pointer; }
+
+.focus-presets { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }

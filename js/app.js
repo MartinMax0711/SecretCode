@@ -13,7 +13,7 @@ import { openSheet, toast } from './ui.js';
 import { exportAll, importAll, requestPersist } from './store.js';
 import { isMuted, setMuted } from './sound.js';
 
-const VERSION = '2026.09.17-7';
+const VERSION = '2026.09.17-8';
 
 // tab: 是否出现在底部导航
 const ROUTES = [

@@ -5,7 +5,7 @@ import { load, save } from '../store.js';
 import { sfx } from '../sound.js';
 import { TOPICS, getRole, hasHisPassword, hisPassword, post, setHisPassword, setRole } from '../roles.js';
 import { getTasks, newTask, publishTasks, syncTasks } from '../tasks-core.js';
-import { MIN_MINUTES, isLocked, startFocus } from '../focus.js';
+import { isLocked, openFocusPicker, startFocus } from '../focus.js';
 import { openStorage } from '../storage-lock.js';
 import { unansweredFromOther, syncRecent } from '../chat-core.js';
 import { relativeTime } from '../dates.js';
@@ -85,12 +85,12 @@ function drawPortal() {
 
     <section class="card portal-block">
       <div class="card-head"><h2>🔕 专注锁</h2></div>
-      <p class="hint">开启后你们双方都会进入专注模式，只看得到你在上什么课，至少 ${MIN_MINUTES} 分钟。</p>
+      <p class="hint">开启后你们双方都会进入专注模式，只看得到你在上什么课。时长自己定。</p>
       ${isLocked() ? '<p class="hint"><b>现在正锁着</b></p>' : ''}
       <div class="btn-row">
-        <button class="btn btn-ghost" data-act="focus" data-min="30">锁 30 分钟</button>
-        <button class="btn btn-ghost" data-act="focus" data-min="60">锁 1 小时</button>
-        <button class="btn btn-primary" data-act="focus" data-min="120">锁 2 小时</button>
+        <button class="btn btn-ghost" data-act="focus" data-min="30">30 分钟</button>
+        <button class="btn btn-ghost" data-act="focus" data-min="60">1 小时</button>
+        <button class="btn btn-primary" data-act="focus-pick">⏱ 自己选时长</button>
       </div>
     </section>
 
@@ -198,8 +198,9 @@ function onClick(e) {
       .then(() => toast(`同步给${CONFIG.herName}了`, { icon: '✅' }))
       .catch(() => toast('同步失败，检查网络', { icon: '⚠️' }));
   } else if (act === 'focus') {
-    const min = Number(e.target.closest('[data-act]').dataset.min) || MIN_MINUTES;
-    startFocus(min);
+    startFocus(Number(e.target.closest('[data-act]').dataset.min) || 30);
+  } else if (act === 'focus-pick') {
+    openFocusPicker();
   } else if (act === 'storage') {
     openStorage();
   } else if (act === 'change-pw') {

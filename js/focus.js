@@ -2,7 +2,7 @@
 // 状态通过 ntfy 的 -focus 频道同步，本地也存一份，关掉网页再打开依然锁着
 import { CONFIG } from './config.js';
 import { load, save } from './store.js';
-import { esc, toast } from './ui.js';
+import { esc, openSheet, toast } from './ui.js';
 import { getRole, post, fetchSince, subscribe, TOPICS } from './roles.js';
 import { notifyHim } from './notify.js';
 import { loadSchedule, nowStatus, cleanTitle, fmtDuration, fmtTime, eventsOnDay, dayKeyIn } from './schedule-core.js';
@@ -37,6 +37,48 @@ export async function startFocus(minutes = MIN_MINUTES) {
     await post(TOPICS.focus, JSON.stringify({ type: 'start', by, until, minutes }));
   } catch { /* 对方可能收不到，本地照样锁 */ }
   show();
+}
+
+// 选时长再开始（晗晗和耀耀都能用）
+export function openFocusPicker() {
+  const presets = [15, 25, 30, 45, 60, 90, 120, 180];
+  const last = load('focusLastMin', 30);
+  const { el, close } = openSheet(`
+    <h3 class="sheet-title">🔕 开启专注锁</h3>
+    <p class="hint">锁上之后你们两个人都会进入专注模式，只看得到${esc(CONFIG.hisName)}在上什么课。
+      想提前解锁要对方点同意哦。</p>
+    <div class="setting-label">锁多久？</div>
+    <div class="focus-presets">
+      ${presets.map((m) => `<button class="chip chip-pick ${m === last ? 'on' : ''}" data-min="${m}">${m < 60 ? `${m} 分钟` : m % 60 === 0 ? `${m / 60} 小时` : `${Math.floor(m / 60)} 小时 ${m % 60} 分`}</button>`).join('')}
+    </div>
+    <label class="field"><span>或者自己填（分钟）</span>
+      <input type="number" class="input" id="focus-custom" min="5" max="480" step="5" placeholder="比如 50">
+    </label>
+    <button class="btn btn-primary btn-block" id="focus-go">开始专注 🔕</button>`);
+
+  let chosen = last;
+  el.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-min]');
+    if (!b) return;
+    chosen = Number(b.dataset.min);
+    el.querySelector('#focus-custom').value = '';
+    el.querySelectorAll('[data-min]').forEach((x) => x.classList.toggle('on', x === b));
+  });
+  el.querySelector('#focus-custom').addEventListener('input', (e) => {
+    const v = Number(e.target.value);
+    if (v > 0) {
+      chosen = v;
+      el.querySelectorAll('[data-min]').forEach((x) => x.classList.remove('on'));
+    }
+  });
+  el.querySelector('#focus-go').addEventListener('click', () => {
+    const custom = Number(el.querySelector('#focus-custom').value);
+    let minutes = custom > 0 ? custom : chosen;
+    minutes = Math.max(5, Math.min(480, Math.round(minutes)));
+    save('focusLastMin', minutes);
+    close();
+    startFocus(minutes);
+  });
 }
 
 // 申请提前解锁

@@ -11,7 +11,7 @@ import { fmtMonthDay, relativeTime, todayKey, fromKey, toKey } from '../dates.js
 import { loadAllPhotos } from './gallery.js';
 import { sleepSummary } from './sleep.js';
 import { syncTasks } from '../tasks-core.js';
-import { MIN_MINUTES, startFocus } from '../focus.js';
+import { openFocusPicker } from '../focus.js';
 
 const base = CONFIG.ntfyServer.replace(/\/$/, '');
 const T_MISS = `${CONFIG.ntfyTopic}-miss`;
@@ -159,7 +159,7 @@ function draw() {
       <a class="quick q-mint" href="#punch"><span class="q-icon">🐶</span><b>解气</b><span>今天打了 ${punchToday} 下</span></a>
       <a class="quick q-lilac" href="#live"><span class="q-icon">📍</span><b>陪着你</b><span>看看${esc(CONFIG.hisName)}在干嘛</span></a>
       <a class="quick q-peach" href="#schedule"><span class="q-icon">📚</span><b>课表</b><span>什么时候有空</span></a>
-      <button class="quick q-lilac" data-act="focus"><span class="q-icon">🔕</span><b>专注锁</b><span>一起专注 ${MIN_MINUTES} 分钟</span></button>
+      <button class="quick q-lilac" data-act="focus"><span class="q-icon">🔕</span><b>专注锁</b><span>自己选时长</span></button>
     </div>`;
 
   renderReplies();
@@ -290,7 +290,7 @@ function onClick(e) {
     root.querySelector('#bell-text').value = '';
     return;
   }
-  if (e.target.closest('[data-act="focus"]')) { startFocus(MIN_MINUTES); return; }
+  if (e.target.closest('[data-act="focus"]')) { openFocusPicker(); return; }
   if (e.target.closest('#bell-btn')) ringBell();
 }
 
