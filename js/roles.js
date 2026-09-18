@@ -15,13 +15,20 @@ export function hasHisPassword() {
   return hisPassword().length > 0;
 }
 
+// 身份由「打开的是哪个页面」决定，不能存 localStorage —— 因为 me.html 和 index.html
+// 在同一个浏览器里共用 localStorage，后打开的会把先打开的身份覆盖掉，
+// 结果就是消息发出去之后「瞬移」到另一边。
+const PAGE_ROLE = /(^|\/)me\.html$/i.test(location.pathname) ? 'him' : 'her';
+
 export function getRole() {
-  return load('role', 'her') === 'him' ? 'him' : 'her';
+  return PAGE_ROLE;
 }
 
-export function setRole(r) {
-  save('role', r === 'him' ? 'him' : 'her');
-}
+// 清掉旧版本留下的 role，它已经没用了
+try { localStorage.removeItem('hh.role'); } catch { /* ignore */ }
+
+// 保留接口但不再写入，避免两个页面互相污染
+export function setRole() { /* 身份看页面，不做事 */ }
 
 export function isHim() {
   return getRole() === 'him';
