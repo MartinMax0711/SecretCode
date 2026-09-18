@@ -6,6 +6,9 @@ import * as punch from './pages/punch.js';
 import * as gallery from './pages/gallery.js';
 import * as live from './pages/live.js';
 import * as sleep from './pages/sleep.js';
+import * as chat from './pages/chat.js';
+import * as portal from './pages/portal.js';
+import { initFocus } from './focus.js';
 import { openSheet, toast } from './ui.js';
 import { exportAll, importAll, requestPersist } from './store.js';
 import { isMuted, setMuted } from './sound.js';
@@ -15,11 +18,13 @@ const ROUTES = [
   { id: 'period', label: '经期', icon: '🌸', page: period, tab: true },
   { id: 'sleep', label: '睡眠', icon: '😴', page: sleep, tab: true },
   { id: 'home', label: '首页', icon: '🔔', page: home, tab: true, center: true },
-  { id: 'letters', label: '道歉信', icon: '💌', page: letters, tab: true },
+  { id: 'chat', label: '聊天', icon: '💬', page: chat, tab: true },
   { id: 'punch', label: '解气', icon: '🐶', page: punch, tab: true },
+  { id: 'letters', label: '道歉信', icon: '💌', page: letters },
   { id: 'schedule', label: '课表', icon: '📚', page: schedule },
   { id: 'gallery', label: '相册', icon: '📷', page: gallery },
   { id: 'live', label: '陪着你', icon: '📍', page: live },
+  { id: 'portal', label: '控制台', icon: '🎛️', page: portal, hidden: true },
 ];
 
 const view = document.getElementById('view');
@@ -31,7 +36,7 @@ function buildNav() {
       <span class="nav-icon">${r.icon}</span><span class="nav-label">${r.label}</span>
     </a>`).join('');
   document.querySelector('.tabbar').innerHTML = tabs;
-  document.querySelector('.topnav').innerHTML = ROUTES.map((r) => `
+  document.querySelector('.topnav').innerHTML = ROUTES.filter((r) => !r.hidden).map((r) => `
     <a href="#${r.id}" data-route="${r.id}" class="nav-item">
       <span class="nav-icon">${r.icon}</span><span class="nav-label">${r.label}</span>
     </a>`).join('');
@@ -100,3 +105,4 @@ document.getElementById('settings-btn').addEventListener('click', openSettings);
 window.addEventListener('hashchange', route);
 requestPersist();
 route();
+initFocus();

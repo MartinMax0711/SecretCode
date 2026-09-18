@@ -278,8 +278,18 @@ if let i = args.firstIndex(of: "--shot"), i + 1 < args.count {
 }
 
 // 默认：把主脚本跑起来
-let here = URL(fileURLWithPath: args[0]).deletingLastPathComponent()          // Contents/MacOS
-let script = here.deletingLastPathComponent().appendingPathComponent("Resources/xiaowo.sh")
+// 脚本放在 .app 外面（Application Support/XiaoWo/），这样改脚本不会破坏 App 签名，
+// 录屏/摄像头/定位的授权就不会因为更新而失效。
+let binURL = URL(fileURLWithPath: args[0])
+let appDir = binURL                       // …/XiaoWo.app/Contents/MacOS/XiaoWo
+    .deletingLastPathComponent()          // …/Contents/MacOS
+    .deletingLastPathComponent()          // …/Contents
+    .deletingLastPathComponent()          // …/XiaoWo.app
+    .deletingLastPathComponent()          // …/XiaoWo
+let outside = appDir.appendingPathComponent("xiaowo.sh")
+let inside = binURL.deletingLastPathComponent().deletingLastPathComponent()
+    .appendingPathComponent("Resources/xiaowo.sh")
+let script = FileManager.default.fileExists(atPath: outside.path) ? outside : inside
 let task = Process()
 task.executableURL = URL(fileURLWithPath: "/bin/zsh")
 task.arguments = [script.path]

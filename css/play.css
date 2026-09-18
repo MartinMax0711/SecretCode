@@ -438,3 +438,97 @@
 .phone-dot { margin-left: auto; width: 10px; height: 10px; border-radius: 50%; background: var(--text-3); flex: none; }
 .phone-dot.live { background: #35ad84; box-shadow: 0 0 0 0 rgba(53,173,132,.6); animation: phone-pulse 1.8s infinite; }
 @keyframes phone-pulse { 0% { box-shadow: 0 0 0 0 rgba(53,173,132,.5); } 70% { box-shadow: 0 0 0 8px rgba(53,173,132,0); } 100% { box-shadow: 0 0 0 0 rgba(53,173,132,0); } }
+
+/* ---------- 聊天 ---------- */
+.chat-card { padding: 14px; }
+.chat-note { min-height: 0; }
+.chat-warn { color: var(--pink-600); font-size: 12.5px; font-weight: 600; }
+.chat-log {
+  height: 52vh;
+  min-height: 300px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 8px 2px 12px;
+}
+.bubble-row { display: flex; flex-direction: column; max-width: 78%; }
+.bubble-row.mine { align-self: flex-end; align-items: flex-end; }
+.bubble-row.theirs { align-self: flex-start; align-items: flex-start; }
+.chat-bubble {
+  padding: 9px 14px;
+  border-radius: 18px;
+  font-size: 15px;
+  line-height: 1.5;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+.bubble-row.mine .chat-bubble { background: linear-gradient(135deg, var(--pink-400), var(--pink-500)); color: #fff; border-bottom-right-radius: 5px; }
+.bubble-row.theirs .chat-bubble { background: var(--pink-50); color: var(--text); border: 1px solid var(--line); border-bottom-left-radius: 5px; }
+.chat-meta { font-size: 10.5px; color: var(--text-3); margin-top: 3px; padding: 0 4px; }
+.chat-form { display: flex; gap: 8px; align-items: center; }
+.chat-form .input { flex: 1; }
+.chat-send { flex: none; padding: 11px 18px; }
+.storage-entry .btn-block { margin-top: 10px; }
+
+/* 储物间 */
+.storage-lock { text-align: center; }
+.lock-emoji { font-size: 44px; margin-bottom: 4px; }
+.storage-lock .field { text-align: left; }
+#pw-err { color: var(--pink-600); min-height: 18px; }
+.sheet-archive .archive { max-height: 66vh; overflow-y: auto; }
+.arch-day { margin-bottom: 16px; }
+.arch-date { font-size: 12px; color: var(--text-3); text-align: center; margin: 10px 0 8px; }
+.arch-msg { display: flex; gap: 8px; align-items: baseline; padding: 6px 10px; border-radius: 12px; margin-bottom: 4px; }
+.arch-msg.him { background: var(--sky-100); }
+.arch-msg.her { background: var(--pink-50); }
+.arch-who { font-size: 11px; color: var(--text-3); flex: none; }
+.arch-text { flex: 1; font-size: 14px; }
+.arch-time { font-size: 10.5px; color: var(--text-3); flex: none; }
+
+/* ---------- 专注锁 ---------- */
+body.focus-on { overflow: hidden; }
+.focus-overlay {
+  position: fixed; inset: 0; z-index: 120;
+  background: linear-gradient(170deg, #3b2230 0%, #5b2f45 60%, #7a3a56 100%);
+  color: #fff;
+  display: grid; place-items: center;
+  padding: 28px 20px;
+  overflow-y: auto;
+}
+.focus-inner { text-align: center; max-width: 420px; width: 100%; }
+.focus-title { font-family: var(--font-cute); font-size: 20px; color: #ffc9dc; }
+.focus-timer { font-size: 62px; font-weight: 200; letter-spacing: 2px; font-variant-numeric: tabular-nums; margin: 6px 0; }
+.focus-by { font-size: 12.5px; color: rgba(255,255,255,.6); margin-bottom: 22px; }
+.focus-class { background: rgba(255,255,255,.1); border-radius: 20px; padding: 18px; margin-bottom: 14px; }
+.focus-class-label { font-size: 12px; color: rgba(255,255,255,.6); }
+.focus-class-name { font-size: 22px; font-weight: 600; margin-top: 4px; }
+.focus-class-sub { font-size: 13.5px; color: rgba(255,255,255,.75); margin-top: 4px; }
+.focus-list { display: flex; flex-direction: column; gap: 7px; margin-bottom: 18px; }
+.focus-item { display: flex; gap: 12px; align-items: baseline; background: rgba(255,255,255,.07); border-radius: 12px; padding: 9px 14px; font-size: 14px; }
+.focus-item span { color: rgba(255,255,255,.6); font-size: 12.5px; flex: none; font-variant-numeric: tabular-nums; }
+.focus-item b { font-weight: 500; text-align: left; }
+.focus-btn { background: rgba(255,255,255,.14); color: #fff; border: 1px solid rgba(255,255,255,.25); width: 100%; }
+.focus-request { background: rgba(255,255,255,.14); border-radius: 18px; padding: 16px; font-size: 15px; }
+.focus-waiting { font-size: 13.5px; color: rgba(255,255,255,.65); padding: 14px; }
+
+/* ---------- 任务 ---------- */
+.task-item { display: flex; align-items: center; gap: 10px; padding: 9px 2px; border-bottom: 1px dashed var(--line); }
+.task-item:last-child { border-bottom: 0; }
+.task-item.done .task-text { text-decoration: line-through; color: var(--text-3); }
+.task-check { background: none; border: 0; font-size: 17px; cursor: pointer; padding: 0; line-height: 1; }
+.task-text { flex: 1; font-size: 14.5px; }
+.task-del { background: none; border: 0; color: var(--text-3); font-size: 15px; cursor: pointer; padding: 2px 6px; }
+.task-list { margin-bottom: 10px; }
+
+/* ---------- 控制台 ---------- */
+.portal-lock { text-align: center; padding: 40px 10px; }
+.portal-title { font-family: var(--font-cute); font-size: 24px; color: var(--pink-600); font-weight: 400; margin: 6px 0; }
+.portal-lock form { margin-top: 20px; display: flex; flex-direction: column; gap: 10px; }
+#portal-err { color: var(--pink-600); min-height: 18px; }
+.portal-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.portal-head .page-title { margin-bottom: 8px; }
+.portal-block form { margin-top: 10px; display: flex; flex-direction: column; gap: 8px; }
+.miss-quick { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+button.quick { font-family: inherit; text-align: left; border: 0; border-top: 3px solid var(--lilac-300); cursor: pointer; }

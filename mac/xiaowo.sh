@@ -7,9 +7,12 @@ set -u
 DIR=${0:A:h}
 # App 包内部绝对不能写东西，否则签名会坏、录屏/定位权限就失效
 APP_SUPPORT=${DIR%/XiaoWo.app/*}
-[[ "$APP_SUPPORT" == "$DIR" ]] && APP_SUPPORT=${TMPDIR:-/tmp}
+[[ "$APP_SUPPORT" == "$DIR" ]] && APP_SUPPORT=$DIR
 NATIVE_LOG="$APP_SUPPORT/native.log"
-[[ -f "$DIR/xiaowo.conf" ]] && source "$DIR/xiaowo.conf"
+# 配置和脚本都在 .app 外面
+for c in "$DIR/xiaowo.conf" "$APP_SUPPORT/xiaowo.conf"; do
+  [[ -f "$c" ]] && source "$c" && break
+done
 
 SERVER=${SERVER:-https://ntfy.sh}
 TOPIC=${TOPIC:?没有配置 TOPIC，请先跑 install.sh}
@@ -21,6 +24,7 @@ ASK_TOPIC="$TOPIC-ask"
 SCREEN_TOPIC="$TOPIC-screen"
 WHERE_TOPIC="$TOPIC-where"
 CAM_TOPIC="$TOPIC-cam"
+CHAT_TOPIC="$TOPIC-chat"
 SOUND=${SOUND:-/System/Library/Sounds/Glass.aiff}
 
 log() { print -r -- "$(date '+%m-%d %H:%M:%S') $*"; }
@@ -50,6 +54,26 @@ handle_info() {
   local title=$1 message=$2
   afplay "$SOUND" >/dev/null 2>&1 &
   osascript -l JavaScript "$DIR/notify.js" "$title" "$message" >/dev/null 2>&1
+}
+
+# 聊天：数晗晗连着发了几条我还没回，满 5 条就响铃
+UNREAD=0
+handle_chat() {
+  local body=$1
+  # 消息是 {"from":"her|him","text":"..."} 这种格式
+  if [[ "$body" == *'"from":"him"'* ]]; then
+    UNREAD=0            # 我自己回了，清零
+    return
+  fi
+  UNREAD=$(( UNREAD + 1 ))
+  local text=${body#*\"text\":\"}
+  text=${text%%\"*}
+  log "晗晗发消息（第 $UNREAD 条）：$text"
+  if (( UNREAD == 5 )); then
+    log "满 5 条没回，响铃！"
+    ring &
+    osascript -l JavaScript "$DIR/notify.js" "💬 ${HER}连发了 5 条消息" "快去小窝回她！" >/dev/null 2>&1
+  fi
 }
 
 # 截屏 + 位置，传给晗晗
@@ -110,7 +134,7 @@ log "小窝助手启动，守着 $TOPIC"
 [[ -n "${XIAOWO_BIN:-}" ]] && "$XIAOWO_BIN" --request 2>>"$NATIVE_LOG" &
 
 while true; do
-  curl -sN -m 0 --no-buffer "$SERVER/$TOPIC,$ASK_TOPIC/json" 2>/dev/null | while IFS= read -r line; do
+  curl -sN -m 0 --no-buffer "$SERVER/$TOPIC,$ASK_TOPIC,$CHAT_TOPIC/json" 2>/dev/null | while IFS= read -r line; do
     [[ "$line" == *'"event":"message"'* ]] || continue
     parsed=$(osascript -l JavaScript "$DIR/parse.js" "$line" 2>/dev/null) || continue
     topic=${parsed%%$'\x1f'*}
@@ -118,7 +142,9 @@ while true; do
     title=${rest%%$'\x1f'*}
     body=${rest#*$'\x1f'}
 
-    if [[ "$topic" == "$ASK_TOPIC" ]]; then
+    if [[ "$topic" == "$CHAT_TOPIC" ]]; then
+      handle_chat "$body"
+    elif [[ "$topic" == "$ASK_TOPIC" ]]; then
       if [[ -n "$SECRET" && "$body" != "$SECRET" ]]; then
         log "有人用错暗号来看屏幕，已忽略"
         continue

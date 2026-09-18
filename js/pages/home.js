@@ -10,6 +10,8 @@ import { computeStats, currentStatus, loadPeriodData } from '../period-core.js';
 import { fmtMonthDay, relativeTime, todayKey, fromKey, toKey } from '../dates.js';
 import { loadAllPhotos } from './gallery.js';
 import { sleepSummary } from './sleep.js';
+import { syncTasks } from '../tasks-core.js';
+import { MIN_MINUTES, startFocus } from '../focus.js';
 
 const base = CONFIG.ntfyServer.replace(/\/$/, '');
 const T_MISS = `${CONFIG.ntfyTopic}-miss`;
@@ -52,6 +54,7 @@ export function render(container) {
   });
 
   loadMiss();
+  loadTasks();
 
   loadAllPhotos().then((photos) => {
     if (!alive || !photos.length) return;
@@ -111,6 +114,8 @@ function draw() {
 
     <div id="miss-slot"></div>
 
+    <div id="tasks-slot"></div>
+
     <div id="now-slot"><section class="card now-card"><div class="now-icon">🐶</div><div class="now-text"><div class="now-label">${esc(CONFIG.hisName)}现在</div><div class="now-main">看看去…</div></div></section></div>
 
     <section class="card bell-card">
@@ -154,9 +159,31 @@ function draw() {
       <a class="quick q-mint" href="#punch"><span class="q-icon">🐶</span><b>解气</b><span>今天打了 ${punchToday} 下</span></a>
       <a class="quick q-lilac" href="#live"><span class="q-icon">📍</span><b>陪着你</b><span>看看${esc(CONFIG.hisName)}在干嘛</span></a>
       <a class="quick q-peach" href="#schedule"><span class="q-icon">📚</span><b>课表</b><span>什么时候有空</span></a>
+      <button class="quick q-lilac" data-act="focus"><span class="q-icon">🔕</span><b>专注锁</b><span>一起专注 ${MIN_MINUTES} 分钟</span></button>
     </div>`;
 
   renderReplies();
+}
+
+// 耀耀报备的任务列表
+async function loadTasks() {
+  const slot = root?.querySelector('#tasks-slot');
+  if (!slot) return;
+  const { items, updatedAt } = await syncTasks();
+  if (!alive || !slot || !items.length) return;
+  const doneCount = items.filter((t) => t.done).length;
+  slot.innerHTML = `
+    <section class="card tasks-card">
+      <div class="card-head">
+        <h2>📝 ${esc(CONFIG.hisName)}今天要做的事</h2>
+        <span class="hint">${doneCount}/${items.length}${updatedAt ? ` · ${relativeTime(updatedAt)}` : ''}</span>
+      </div>
+      ${items.map((t) => `
+        <div class="task-item ${t.done ? 'done' : ''}">
+          <span class="task-check">${t.done ? '✅' : '⬜️'}</span>
+          <span class="task-text">${esc(t.text)}</span>
+        </div>`).join('')}
+    </section>`;
 }
 
 // 老公（耀耀）主动发的「我想你」时间线
@@ -263,6 +290,7 @@ function onClick(e) {
     root.querySelector('#bell-text').value = '';
     return;
   }
+  if (e.target.closest('[data-act="focus"]')) { startFocus(MIN_MINUTES); return; }
   if (e.target.closest('#bell-btn')) ringBell();
 }
 

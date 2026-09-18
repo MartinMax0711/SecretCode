@@ -14,7 +14,7 @@ HER=$(grep -o "herName: *'[^']*'" "$SRC/../js/config.js" | sed "s/.*'\(.*\)'/\1/
 [[ -n "$TOPIC" ]] || { echo "没在 js/config.js 里找到 ntfyTopic"; exit 1; }
 
 OLD_SECRET=""
-[[ -f "$APP/Contents/Resources/xiaowo.conf" ]] && OLD_SECRET=$(grep -o 'SECRET=.*' "$APP/Contents/Resources/xiaowo.conf" | cut -d= -f2-)
+[[ -f "$APP_DIR/xiaowo.conf" ]] && OLD_SECRET=$(grep -o 'SECRET=.*' "$APP_DIR/xiaowo.conf" | cut -d= -f2-)
 DEFAULT_SECRET=${OLD_SECRET:-$(LC_ALL=C tr -dc 'a-z0-9' </dev/urandom | head -c 8)}
 
 echo "🎀 小窝助手安装"
@@ -31,23 +31,30 @@ echo "   编译原生程序（截屏 + 定位）…"
 command -v swiftc >/dev/null || { echo "❌ 没装 Xcode 命令行工具，先跑：xcode-select --install"; exit 1; }
 
 # 组装 App：macOS 的录屏和定位权限只认签名过的 App，不给 shell 脚本弹窗
-rm -rf "$APP"
-mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
-swiftc -O -o "$APP/Contents/MacOS/XiaoWo" "$SRC/XiaoWoHelper.swift" 2>&1 | grep -E "error:" && { echo "❌ 编译失败"; exit 1; } || true
-cp "$SRC/Info.plist" "$APP/Contents/Info.plist"
-cp "$SRC"/xiaowo.sh "$SRC"/parse.js "$SRC"/notify.js "$SRC"/dialog.js "$SRC"/where.js "$APP/Contents/Resources/"
-chmod +x "$APP/Contents/Resources/xiaowo.sh"
+# 脚本一律放在 .app 外面：改脚本不用重新签名，系统授权就不会失效
+mkdir -p "$APP_DIR"
+cp "$SRC"/xiaowo.sh "$SRC"/parse.js "$SRC"/notify.js "$SRC"/dialog.js "$SRC"/where.js "$APP_DIR/"
+chmod +x "$APP_DIR/xiaowo.sh"
 
-cat > "$APP/Contents/Resources/xiaowo.conf" <<CONF
+cat > "$APP_DIR/xiaowo.conf" <<CONF
 SERVER=$SERVER
 TOPIC=$TOPIC
 HER=$HER
 SECRET=$SECRET
 CONF
-chmod 600 "$APP/Contents/Resources/xiaowo.conf"
+chmod 600 "$APP_DIR/xiaowo.conf"
 
-# 本地签名，这样系统能记住给过的权限
-codesign --force --sign - --identifier com.xiaowo.helper "$APP" >/dev/null 2>&1 || echo "（签名跳过了，权限可能每次更新后要重给）"
+# App 包里只有二进制和 Info.plist，内容固定，签名才稳定
+if [[ -x "$APP/Contents/MacOS/XiaoWo" ]] && [[ "$SRC/XiaoWoHelper.swift" -ot "$APP/Contents/MacOS/XiaoWo" ]]; then
+  echo "   原生程序没变，跳过编译（保住已有授权）"
+else
+  rm -rf "$APP"
+  mkdir -p "$APP/Contents/MacOS"
+  swiftc -O -o "$APP/Contents/MacOS/XiaoWo" "$SRC/XiaoWoHelper.swift" 2>&1 | grep -E "error:" && { echo "❌ 编译失败"; exit 1; } || true
+  cp "$SRC/Info.plist" "$APP/Contents/Info.plist"
+  codesign --force --sign - --identifier com.xiaowo.helper "$APP" >/dev/null 2>&1 || echo "（签名跳过了）"
+  echo "   ⚠️ 原生程序重新编译了，录屏/摄像头/定位可能需要重新授权一次"
+fi
 
 mkdir -p "$HOME/Library/LaunchAgents"
 cat > "$PLIST" <<PL
