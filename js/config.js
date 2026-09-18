@@ -1,4 +1,6 @@
 // 网站的基本设置，改这里就行
+export const VERSION = '2026.09.17-6';
+
 export const CONFIG = {
   herName: '晗晗',
   hisName: '耀耀',

@@ -12,6 +12,7 @@ import { initFocus } from './focus.js';
 import { openSheet, toast } from './ui.js';
 import { exportAll, importAll, requestPersist } from './store.js';
 import { isMuted, setMuted } from './sound.js';
+import { VERSION } from './config.js';
 
 // tab: 是否出现在底部导航
 const ROUTES = [
@@ -72,6 +73,10 @@ function openSettings() {
         <button class="btn btn-ghost" id="set-export">📦 导出备份</button>
         <label class="btn btn-ghost file-btn">📥 导入备份<input type="file" accept="application/json,.json" id="set-import" hidden></label>
       </div>
+    </div>
+    <div class="setting-block">
+      <div class="setting-label">版本</div>
+      <p class="hint">当前版本 <b>${VERSION}</b>。如果功能没更新，把网址后面加 <code>?v=2</code> 再打开一次就好。</p>
     </div>
     <div class="setting-block">
       <div class="setting-label">放到主屏幕</div>
