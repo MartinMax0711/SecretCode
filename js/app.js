@@ -7,13 +7,16 @@ import * as gallery from './pages/gallery.js';
 import * as live from './pages/live.js';
 import * as sleep from './pages/sleep.js';
 import * as chat from './pages/chat.js';
-import * as portal from './pages/portal.js';
 import { initFocus } from './focus.js';
 import { openSheet, toast } from './ui.js';
 import { exportAll, importAll, requestPersist } from './store.js';
 import { isMuted, setMuted } from './sound.js';
+import { setRole } from './roles.js';
 
-const VERSION = '2026.09.17-8';
+const VERSION = '2026.09.17-9';
+
+// 这是晗晗的站点：身份固定为她（耀耀有自己的 me.html）
+setRole('her');
 
 // tab: 是否出现在底部导航
 const ROUTES = [
@@ -26,7 +29,6 @@ const ROUTES = [
   { id: 'schedule', label: '课表', icon: '📚', page: schedule },
   { id: 'gallery', label: '相册', icon: '📷', page: gallery },
   { id: 'live', label: '陪着你', icon: '📍', page: live },
-  { id: 'portal', label: '控制台', icon: '🎛️', page: portal, hidden: true },
 ];
 
 const view = document.getElementById('view');

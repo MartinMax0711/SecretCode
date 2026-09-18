@@ -1,0 +1,30 @@
+/* 耀耀的控制台：换成偏冷的蓝紫色，一眼就知道在自己的页面上 */
+body.me-app {
+  --pink-50: #eef2fb;
+  --pink-100: #e0e8f8;
+  --pink-200: #c3d3f2;
+  --pink-300: #9db8ea;
+  --pink-400: #7396df;
+  --pink-500: #4f78d0;
+  --pink-600: #3a5fb4;
+  --rose-700: #2c4890;
+  --text: #2b3550;
+  --text-2: #5f6d8c;
+  --text-3: #93a0bb;
+  --line: #dbe4f6;
+  --bg: #f4f7fd;
+  --bg-2: #e8eefc;
+  --shadow: 0 6px 22px rgba(79, 120, 208, .13);
+  --shadow-lg: 0 14px 40px rgba(79, 120, 208, .22);
+}
+body.me-app .brand-bow { animation: none; }
+.me-block { margin-bottom: 14px; }
+.her-item {
+  display: flex; align-items: baseline; gap: 10px;
+  padding: 9px 12px; border-radius: 12px;
+  background: var(--pink-50); margin-bottom: 6px;
+}
+.her-title { font-size: 12.5px; color: var(--pink-600); font-weight: 600; flex: none; max-width: 40%; }
+.her-text { flex: 1; font-size: 13.5px; }
+.her-time { font-size: 10.5px; color: var(--text-3); flex: none; }
+.page-lock { display: grid; place-items: center; min-height: 70vh; }
