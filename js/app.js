@@ -12,7 +12,8 @@ import { initFocus } from './focus.js';
 import { openSheet, toast } from './ui.js';
 import { exportAll, importAll, requestPersist } from './store.js';
 import { isMuted, setMuted } from './sound.js';
-import { VERSION } from './config.js';
+
+const VERSION = '2026.09.17-7';
 
 // tab: 是否出现在底部导航
 const ROUTES = [

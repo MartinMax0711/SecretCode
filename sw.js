@@ -4,7 +4,11 @@ const CACHE = 'hanhan-nest';
 
 self.addEventListener('install', () => self.skipWaiting());
 
-self.addEventListener('activate', (e) => e.waitUntil(self.clients.claim()));
+self.addEventListener('activate', (e) => e.waitUntil(
+  caches.keys()
+    .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
+    .then(() => self.clients.claim()),
+));
 
 self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);
@@ -12,7 +16,8 @@ self.addEventListener('fetch', (e) => {
   if (url.origin !== location.origin || e.request.method !== 'GET') return;
 
   e.respondWith(
-    fetch(e.request)
+    // cache: 'reload' 绕过浏览器自己的 HTTP 缓存，保证模块新旧一致
+    fetch(new Request(e.request, { cache: 'reload' }))
       .then((res) => {
         if (res && res.status === 200) {
           const copy = res.clone();
