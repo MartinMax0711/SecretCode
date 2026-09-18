@@ -76,20 +76,29 @@ function paint() {
   const atBottom = log.scrollHeight - log.scrollTop - log.clientHeight < 60;
 
   log.innerHTML = msgs.length
-    ? msgs.map((m) => {
+    ? msgs.map((m, i) => {
         const mine = m.from === me;
+        const who = m.from === 'him' ? CONFIG.hisName : CONFIG.herName;
         const d = new Date(m.ts);
         const hh = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
         const left = Math.max(0, LIVE_MS - (Date.now() - m.ts));
         const mins = Math.round(left / 60000);
-        return `<div class="bubble-row ${mine ? 'mine' : 'theirs'}">
+        // 同一个人连着发的，只在第一条上显示名字和头像
+        const newSpeaker = i === 0 || msgs[i - 1].from !== m.from;
+        return `<div class="bubble-row ${mine ? 'mine' : 'theirs'} ${newSpeaker ? 'first' : ''}">
+          ${newSpeaker ? `<div class="chat-who">
+            <img class="chat-avatar" src="${esc(m.from === 'him' ? CONFIG.avatarHim : CONFIG.avatarHer)}"
+                 alt="${esc(who)}" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'chat-avatar fallback',textContent:'${m.from === 'him' ? '🐶' : '🎀'}'}))">
+            ${esc(mine ? `${who}（我）` : who)}</div>` : ''}
           <div class="chat-bubble">${esc(m.text)}</div>
           <div class="chat-meta">${hh}${mins < 30 ? ` · ${mins} 分钟后进储物间` : ''}</div>
         </div>`;
       }).join('')
     : '<p class="empty">这里还没有消息～ 说句话吧</p>';
 
-  if (atBottom) log.scrollTop = log.scrollHeight;
+  // 自己刚发的、或本来就在底部，就滚到最新
+  const last = msgs[msgs.length - 1];
+  if (atBottom || (last && last.from === me)) log.scrollTop = log.scrollHeight;
 
   const n = unansweredFromOther();
   if (note) {

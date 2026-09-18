@@ -5,6 +5,10 @@ export const CONFIG = {
   herName: '晗晗',
   hisName: '耀耀',
 
+  // 头像（放在 assets/ 里）
+  avatarHer: 'assets/avatar-her.jpg',
+  avatarHim: 'assets/avatar-him.jpg',
+
   // 老公铃用的推送频道（ntfy.sh）。电脑端监听脚本会读这个值，改了要重新运行 mac/install.sh
   ntfyServer: 'https://ntfy.sh',
   ntfyTopic: 'hanhan-bell-cwm003idg60frr',

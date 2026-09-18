@@ -13,7 +13,7 @@ import { exportAll, importAll, requestPersist } from './store.js';
 import { isMuted, setMuted } from './sound.js';
 import { setRole } from './roles.js';
 
-const VERSION = '2026.09.17-9';
+const VERSION = '2026.09.17-10';
 
 // 这是晗晗的站点：身份固定为她（耀耀有自己的 me.html）
 setRole('her');
