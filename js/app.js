@@ -111,3 +111,8 @@ window.addEventListener('hashchange', route);
 requestPersist();
 route();
 initFocus();
+
+// 网络优先的 Service Worker：更新后打开就是新版，不用手动刷新
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).catch(() => {});
+}
