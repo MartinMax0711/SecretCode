@@ -2,14 +2,18 @@
 import { esc, openSheet, toast } from './ui.js';
 import { load, save } from './store.js';
 import { CONFIG } from './config.js';
-import { HIS_PASSWORD } from './roles.js';
+import { hasHisPassword, hisPassword } from './roles.js';
 import { archivedMessages } from './chat-core.js';
 import { fmtMonthDay } from './dates.js';
 import { sfx } from './sound.js';
 
-// 晗晗的密码：默认就是进小窝的开启密码，她可以自己改
+// 晗晗的密码：就用她进「陪着你」时输过的开启密码（存在她自己设备上），也可以单独设
 export function herPassword() {
-  return load('herPassword', '') || load('secret', '') || 'hanhan';
+  return load('herPassword', '') || load('secret', '') || '';
+}
+
+export function hasHerPassword() {
+  return herPassword().length > 0;
 }
 
 export function setHerPassword(v) {
@@ -31,8 +35,8 @@ export function openStorage(onClose) {
   const tryOpen = () => {
     const a = el.querySelector('#pw-her').value.trim();
     const b = el.querySelector('#pw-him').value.trim();
-    const okHer = a === herPassword();
-    const okHim = b === HIS_PASSWORD;
+    const okHer = hasHerPassword() && a === herPassword();
+    const okHim = hasHisPassword() && b === hisPassword();
     if (okHer && okHim) {
       sfx.tada();
       close();
@@ -41,6 +45,8 @@ export function openStorage(onClose) {
     }
     const err = el.querySelector('#pw-err');
     err.textContent = !a || !b ? '两个密码都要填哦，少一个打不开'
+      : !hasHerPassword() ? `${CONFIG.herName}还没设过密码（在「陪着你」里输一次暗号就有了）`
+      : !hasHisPassword() ? `${CONFIG.hisName}还没在这台设备上设过密码（去控制台设一下）`
       : !okHer && !okHim ? '两个密码都不对'
       : !okHer ? `${CONFIG.herName}的密码不对` : `${CONFIG.hisName}的密码不对`;
     sfx.slap();

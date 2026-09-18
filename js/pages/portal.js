@@ -1,9 +1,9 @@
-// 耀耀的专属控制台：用 520520 进来，所有「需要他操作」的功能都在这
+// 耀耀的专属控制台：用他自己设的密码进来，所有「需要他操作」的功能都在这
 import { CONFIG } from '../config.js';
 import { esc, toast, floatAt } from '../ui.js';
 import { load, save } from '../store.js';
 import { sfx } from '../sound.js';
-import { HIS_PASSWORD, TOPICS, getRole, post, setRole } from '../roles.js';
+import { TOPICS, getRole, hasHisPassword, hisPassword, post, setHisPassword, setRole } from '../roles.js';
 import { getTasks, newTask, publishTasks, syncTasks } from '../tasks-core.js';
 import { MIN_MINUTES, isLocked, startFocus } from '../focus.js';
 import { openStorage } from '../storage-lock.js';
@@ -34,14 +34,17 @@ export function destroy() {
 }
 
 function drawLock() {
+  const first = !hasHisPassword();
   root.innerHTML = `
     <div class="portal-lock">
       <div class="lock-emoji">🔐</div>
-      <h1 class="portal-title">耀耀的控制台</h1>
-      <p class="hint">这里是只有${esc(CONFIG.hisName)}能进的地方</p>
+      <h1 class="portal-title">${esc(CONFIG.hisName)}的控制台</h1>
+      <p class="hint">${first
+        ? '这台设备第一次进来，设一个只有你知道的密码（只存在这台设备上，不会进仓库）'
+        : `这里是只有${esc(CONFIG.hisName)}能进的地方`}</p>
       <form id="portal-form">
-        <input type="password" class="input" id="portal-pw" placeholder="输入密码" autocomplete="off">
-        <button class="btn btn-primary btn-block" type="submit">进去</button>
+        <input type="password" class="input" id="portal-pw" placeholder="${first ? '设置密码' : '输入密码'}" autocomplete="off">
+        <button class="btn btn-primary btn-block" type="submit">${first ? '设好了，进去' : '进去'}</button>
       </form>
       <p class="hint" id="portal-err"></p>
     </div>`;
@@ -101,7 +104,8 @@ function drawPortal() {
 
     <section class="card portal-block">
       <div class="card-head"><h2>🔑 我的密码</h2></div>
-      <p class="hint">你的储物间密码是 <b>${HIS_PASSWORD}</b>（写死在代码里）。${esc(CONFIG.herName)}的密码就是她进小窝的开启密码。</p>
+      <p class="hint">你的密码只存在这台设备上，没有进仓库。${esc(CONFIG.herName)}的密码是她进小窝的开启密码。</p>
+      <button class="btn btn-ghost btn-block" data-act="change-pw">改密码</button>
     </section>`;
 }
 
@@ -124,7 +128,15 @@ function onSubmit(e) {
   e.preventDefault();
   if (e.target.id === 'portal-form') {
     const pw = root.querySelector('#portal-pw').value.trim();
-    if (pw === HIS_PASSWORD) {
+    if (!hasHisPassword()) {
+      // 第一次：设定密码
+      if (pw.length < 4) {
+        root.querySelector('#portal-err').textContent = '密码至少 4 位';
+        return;
+      }
+      setHisPassword(pw);
+    }
+    if (pw === hisPassword()) {
       save('portalOpen', true);
       setRole('him');
       sfx.tada();
@@ -190,6 +202,12 @@ function onClick(e) {
     startFocus(min);
   } else if (act === 'storage') {
     openStorage();
+  } else if (act === 'change-pw') {
+    const v = prompt('设一个新密码（至少 4 位，只存这台设备）');
+    if (v && v.trim().length >= 4) {
+      setHisPassword(v.trim());
+      toast('密码改好了', { icon: '🔑' });
+    }
   } else if (act === 'logout') {
     save('portalOpen', false);
     setRole('her');

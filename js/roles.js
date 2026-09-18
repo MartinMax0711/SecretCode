@@ -1,8 +1,19 @@
-// 谁在看这个网页：默认是晗晗（her）；耀耀用 520520 进入 portal 后，这台设备变成 him
+// 谁在看这个网页：默认是晗晗（her）；耀耀用自己的密码进入 portal 后，这台设备变成 him
 import { load, save } from './store.js';
 import { CONFIG } from './config.js';
 
-export const HIS_PASSWORD = '520520'; // 耀耀的密码（你自己的设备用，写在这里没关系）
+// 耀耀的密码不写进仓库（仓库是公开的）。第一次在控制台里设定，之后只存在这台设备上。
+export function hisPassword() {
+  return load('hisPassword', '') || '';
+}
+
+export function setHisPassword(v) {
+  save('hisPassword', String(v).trim());
+}
+
+export function hasHisPassword() {
+  return hisPassword().length > 0;
+}
 
 export function getRole() {
   return load('role', 'her') === 'him' ? 'him' : 'her';
